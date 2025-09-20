@@ -146,21 +146,21 @@ def stats(pages_path: str, stats_path: str):
     df.to_csv(stats_path, sep = '\t')
 
 
-# @argument('offset', type = int, default = 0)
-# @argument('n-pages', type = int, default = 1000)
 @main.command()
 @argument('numbers-path', type = str, default = 'assets/numbers.txt')
 @argument('pages-path', type = str, default = PAGES_PATH)
-# def pull(numbers_path: str, destination_path: str, offset: int, n_pages: int):
 def pull(numbers_path: str, pages_path: str):
     session = Session()
+
+    if not os.path.isdir(pages_path):
+        os.makedirs(pages_path)
 
     with open(numbers_path, 'r', encoding = 'utf-8') as file:
         numbers = [int(line[:-1]) for line in file.readlines()]
 
     n_missing = 0
 
-    pbar = tqdm(numbers, desc = 'Missing 0 disertations')
+    pbar = tqdm(numbers, desc = 'Missing 0 dissertations')
     for number in pbar:
         page_path = os.path.join(pages_path, f'{number}.html')
 

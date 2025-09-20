@@ -7,7 +7,6 @@ ITMO PhD dissertaion aggregator
 ```sh
 create -n dissannounce python=3.13
 pip install beautifulsoup4==4.13.5 click==8.3.0 pandas==2.3.2 requests==2.32.5 tqdm==4.67.1
-mkdir -p assets/pages
 ```
 
 ## Pull data
