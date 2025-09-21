@@ -201,9 +201,6 @@ def download(pages_path: str, stats_path: str, texts_path: str):
 
         speciality_path = os.path.join(texts_path, speciality)
 
-        if not os.path.isdir(speciality_path):
-            os.makedirs(speciality_path)
-
         heading = extract_heading(bs)
         dissertation_path = None
 
@@ -216,9 +213,6 @@ def download(pages_path: str, stats_path: str, texts_path: str):
 
         download_link = extract_download_link(bs)
 
-        with open(dissertation_path, 'wb') as file_handler:
-            pass
-
         print(f'Loading {dissertation_path}...')
 
         response = session.get(download_link, allow_redirects = True)  # These requests are limited!!!
@@ -229,6 +223,9 @@ def download(pages_path: str, stats_path: str, texts_path: str):
         download_link = download_script.text.split('"', maxsplit = 2)[1]
 
         response = session.get(download_link)
+
+        if not os.path.isdir(speciality_path):
+            os.makedirs(speciality_path)
 
         with open(dissertation_path, 'wb') as file_handler:
             file_handler.write(response.content)
