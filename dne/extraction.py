@@ -11,6 +11,8 @@ SPECIALITY_PATTERN = re.compile('.*Специальность:.*')
 UPLOAD_DATE_PATTERN = re.compile('.*Дата размещения диссертации:.*')
 DEFENCE_DATE_PATTERN = re.compile('.*Дата защиты:.*')
 
+DISSERTATION_DOWNLOAD_LINK_PATTERN = re.compile('.*Диссертация.*')
+
 
 def extract_prop(bs: BeautifulSoup, pattern: re.Pattern) -> str | None:
     candidates = bs.find_all('strong', string = pattern)
@@ -68,3 +70,7 @@ def extract_author(bs: BeautifulSoup):
     bs = bs.find('section', class_ = 'dissertation-description')
 
     return bs.find('h3', class_ = 'person__card-heading').text.strip()
+
+
+def extract_download_link(bs: BeautifulSoup):
+    return bs.find('a', string = DISSERTATION_DOWNLOAD_LINK_PATTERN).get('href')

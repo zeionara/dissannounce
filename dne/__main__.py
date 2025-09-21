@@ -1,4 +1,5 @@
 import os
+from time import sleep
 
 from pathlib import Path
 from http import HTTPStatus
@@ -9,7 +10,7 @@ from tqdm import tqdm
 from pandas import DataFrame, read_csv, set_option
 from datetime import datetime
 
-from .extraction import extract_status, extract_dissovet, extract_speciality, extract_heading, extract_supervisor, extract_upload_date, extract_defence_date, extract_author
+from .extraction import extract_status, extract_dissovet, extract_speciality, extract_heading, extract_supervisor, extract_upload_date, extract_defence_date, extract_author, extract_download_link
 
 
 PAGES_PATH = 'assets/pages'
@@ -160,7 +161,16 @@ def stats(pages_path: str, stats_path: str):
                 }
             )
 
-    df = DataFrame.from_records(records, index = 'id')
+    df = DataFrame.from_records(
+        sorted(
+            records,
+            key = lambda record: datetime.strptime(
+                record['defended'],
+                '%d.%m.%Y'
+            ),
+            reverse = True
+        ), index = 'id'
+    )
     df.to_csv(stats_path, sep = '\t')
 
     df_interval = df['interval']
@@ -169,6 +179,59 @@ def stats(pages_path: str, stats_path: str):
     q3 = df_interval.quantile(0.95)
 
     print(f'Average interval between dissertation upload and defence data is {df_interval[(df_interval >= q1) & (df_interval <= q3)].mean():0.2f} days')
+
+
+@main.command()
+@argument('pages-path', type = str, default = PAGES_PATH)
+@argument('stats-path', type = str, default = STATS_PATH)
+@argument('texts-path', type = str, default = 'assets/texts')
+def download(pages_path: str, stats_path: str, texts_path: str):
+    session = Session()
+
+    if not os.path.isdir(texts_path):
+        os.makedirs(texts_path)
+
+    df = read_csv(stats_path, sep = '\t')
+
+    for id_ in df.id:
+        with open(os.path.join(pages_path, f'{id_}.html'), 'r', encoding = 'utf-8') as file_handler:
+            bs = BeautifulSoup(file_handler.read(), features = 'html.parser')
+
+        speciality = extract_speciality(bs)
+
+        speciality_path = os.path.join(texts_path, speciality)
+
+        if not os.path.isdir(speciality_path):
+            os.makedirs(speciality_path)
+
+        heading = extract_heading(bs)
+        dissertation_path = None
+
+        while dissertation_path is None or len(dissertation_path.encode('utf-8')) >= 255:
+            dissertation_path = os.path.join(speciality_path, f'{heading}.pdf')
+            heading = heading[:-1]
+
+        if speciality != '05.13.17' or os.path.isfile(dissertation_path):
+            continue
+
+        download_link = extract_download_link(bs)
+
+        with open(dissertation_path, 'wb') as file_handler:
+            pass
+
+        print(f'Loading {dissertation_path}...')
+
+        response = session.get(download_link, allow_redirects = True)  # These requests are limited!!!
+
+        bs = BeautifulSoup(response.text, features = 'html.parser')
+
+        download_script = bs.find_all('script')[-1]
+        download_link = download_script.text.split('"', maxsplit = 2)[1]
+
+        response = session.get(download_link)
+
+        with open(dissertation_path, 'wb') as file_handler:
+            file_handler.write(response.content)
 
 
 @main.command()
@@ -204,10 +267,6 @@ def pull(numbers_path: str, pages_path: str):
             pbar.set_description(f'Missing {n_missing} pages')
 
             print(f'Dissertation №{number} is missing - page is not available')
-
-            # bs = BeautifulSoup(result.text)
-
-            # print(bs)
 
 
 if __name__ == '__main__':
